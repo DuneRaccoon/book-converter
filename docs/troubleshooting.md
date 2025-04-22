@@ -104,6 +104,53 @@ ValueError: PDF is encrypted, password required
    converter = PDFConverter("secure.pdf", password="yourpassword")
    ```
 
+### EPUB Conversion Error with Integer TOC
+
+**Problem**: Error about integer objects with no title attribute during EPUB conversion.
+
+```
+AttributeError: 'int' object has no attribute 'title'
+```
+
+**Solutions**:
+1. The issue is related to the table of contents structure. You can try:
+   ```python
+   converter.to_epub("output.epub", toc_depth=2)  # Limit TOC depth
+   ```
+
+2. If the error persists, you can disable using the PDF's TOC:
+   ```bash
+   # Add a --no-toc option in your converter
+   ```
+
+3. For a specific file that's problematic, consider creating a custom TOC or using a different format.
+
+### MOBI Conversion Issues
+
+**Problem**: Cannot convert to MOBI format.
+
+**Solutions**:
+1. Ensure Calibre is installed with the ebook-convert tool:
+   ```bash
+   ebook-convert --version
+   ```
+
+2. If not installed, download Calibre from [calibre-ebook.com](https://calibre-ebook.com/download)
+
+3. Add Calibre to your PATH:
+   ```bash
+   # On Windows, usually at:
+   # C:\Program Files\Calibre2\
+   
+   # On macOS, usually at:
+   # /Applications/calibre.app/Contents/MacOS/
+   ```
+
+4. If Calibre cannot be installed, use EPUB format instead:
+   ```bash
+   book-converter convert input.pdf --output output.epub
+   ```
+
 ### Output Quality Issues
 
 **Problem**: Poor output quality in converted files.
@@ -176,72 +223,6 @@ ValueError: PDF is encrypted, password required
    converter.to_html("output.html", embed_images=True)
    ```
 
-### Incorrect Table of Contents
-
-**Problem**: Table of contents is missing or incorrect.
-
-**Solutions**:
-1. Check if the PDF has a table of contents:
-   ```python
-   converter = PDFConverter("input.pdf")
-   print(f"TOC entries: {len(converter.toc)}")
-   ```
-
-2. Adjust TOC depth:
-   ```bash
-   book-converter convert input.pdf --output output.epub --toc-depth 2
-   ```
-
-3. For PDFs without TOC, you might need to create one manually:
-   ```python
-   # Extract the converted EPUB, modify content.opf, and repack
-   # (This is advanced and requires external tools)
-   ```
-
-## Performance Issues
-
-### Slow Conversion
-
-**Problem**: Conversion takes too long.
-
-**Solutions**:
-1. Optimize for speed by disabling features:
-   ```bash
-   book-converter convert input.pdf --output output.epub --no-images
-   ```
-
-2. For batch conversion, limit formats:
-   ```bash
-   book-converter batch *.pdf --output-dir converted --format txt  # Text is fastest
-   ```
-
-3. For large PDFs, consider splitting them first:
-   ```bash
-   # Use external tools like pdfseparate to split PDFs
-   ```
-
-### High Memory Usage
-
-**Problem**: Conversion uses excessive memory.
-
-**Solutions**:
-1. Convert one file at a time:
-   ```bash
-   for file in *.pdf; do
-       book-converter convert "$file" --output "${file%.pdf}.epub"
-   done
-   ```
-
-2. Disable image extraction if not needed:
-   ```bash
-   book-converter convert large.pdf --output large.txt --no-images
-   ```
-
-3. Use the text format for very large documents:
-   ```bash
-   book-converter convert huge.pdf --output huge.txt
-   ```
-
 ## Command-Line Issues
 
 ### Command Not Found
@@ -281,91 +262,6 @@ ValueError: PDF is encrypted, password required
    book-converter convert "My Document.pdf" --output "My Document.epub"
    ```
 
-## Output File Issues
-
-### Cannot Write to Output
-
-**Problem**: Error when writing to the output file.
-
-**Solutions**:
-1. Check if you have write permission:
-   ```bash
-   touch test_write.txt  # In the target directory
-   ```
-
-2. Check if the output file is already open in another program.
-
-3. Use absolute paths:
-   ```bash
-   book-converter convert /absolute/path/to/input.pdf --output /absolute/path/to/output.epub
-   ```
-
-### Incomplete or Corrupted Output
-
-**Problem**: Output file exists but is incomplete or corrupted.
-
-**Solutions**:
-1. Check disk space:
-   ```bash
-   df -h  # Unix/Linux/macOS
-   ```
-
-2. Verify the input PDF isn't corrupted:
-   ```bash
-   pdftocairo -pdf input.pdf test_output.pdf  # Requires poppler-utils
-   ```
-
-3. Try a different output format:
-   ```bash
-   book-converter convert input.pdf --output output.txt
-   ```
-
-## Library Integration Issues
-
-### Multiple Versions Conflict
-
-**Problem**: Conflicts between different versions of dependencies.
-
-**Solutions**:
-1. Use a virtual environment:
-   ```bash
-   python -m venv converter_env
-   source converter_env/bin/activate  # Unix/Linux/macOS
-   converter_env\Scripts\activate  # Windows
-   pip install book-converter
-   ```
-
-2. Check for conflicting packages:
-   ```bash
-   pip list | grep mupdf
-   pip list | grep fitz
-   ```
-
-### Thread Safety Issues
-
-**Problem**: Errors when using in multi-threaded applications.
-
-**Solutions**:
-1. Create a new converter instance for each thread:
-   ```python
-   def convert_thread(pdf_path, output_path):
-       converter = PDFConverter(pdf_path)
-       converter.to_epub(output_path)
-   ```
-
-2. Use process-based parallelism instead:
-   ```python
-   from multiprocessing import Pool
-   
-   def convert_file(args):
-       input_path, output_path = args
-       converter = PDFConverter(input_path)
-       return converter.to_epub(output_path)
-   
-   with Pool() as pool:
-       results = pool.map(convert_file, zip(input_files, output_files))
-   ```
-
 ## Getting Additional Help
 
 If you encounter issues not covered in this guide:
@@ -378,5 +274,3 @@ If you encounter issues not covered in this guide:
    ```
 
 3. Create a minimal reproducible example and submit an issue.
-
-4. For urgent support, consider reaching out to the maintainers directly.

@@ -1,6 +1,6 @@
 # Book Converter
 
-A powerful, production-ready PDF conversion tool that can transform PDF files into various formats including EPUB, MOBI, HTML, TXT, DOCX, and more.
+A powerful, production-ready PDF conversion tool that can transform PDF files into various formats including EPUB, HTML, TXT, DOCX, and Markdown.
 
 ## Features
 
@@ -10,7 +10,7 @@ A powerful, production-ready PDF conversion tool that can transform PDF files in
   - Markdown (.md)
   - Plain text (.txt)
   - Word document (.docx)
-  - Mobi (.mobi)
+  - MOBI (.mobi) - requires Calibre's ebook-convert
 - Preserve formatting, images, and tables when possible
 - Batch conversion of multiple files
 - Command-line interface for easy automation
@@ -26,7 +26,7 @@ pip install book-converter
 
 ### From Source
 ```bash
-git clone https://github.com/duneraccoon/book-converter.git
+git clone https://github.com/yourusername/book-converter.git
 cd book-converter
 pip install -e .
 ```
@@ -42,7 +42,7 @@ book-converter convert input.pdf --output output.epub
 book-converter convert input.pdf --output output.docx
 
 # Batch conversion
-book-converter convert *.pdf --output-dir converted_books --format epub
+book-converter convert *.pdf --output-dir converted --format epub
 ```
 
 ### Python API
@@ -64,6 +64,15 @@ converter.to_epub(
 )
 ```
 
+## MOBI Conversion Note
+
+MOBI conversion requires Calibre's `ebook-convert` command-line tool to be installed and available in your PATH. If Calibre is not installed, the converter will fall back to creating an EPUB file with a .mobi extension.
+
+To install Calibre:
+- Visit [Calibre's download page](https://calibre-ebook.com/download)
+- Follow the installation instructions for your operating system
+- Make sure the `ebook-convert` tool is available in your system PATH
+
 ## Documentation
 
 For more detailed documentation, see the [docs](docs/) directory:
@@ -77,7 +86,15 @@ For more detailed documentation, see the [docs](docs/) directory:
 ## Requirements
 
 - Python 3.7+
-- See requirements.txt for dependencies
+- PyMuPDF (fitz)
+- ebooklib
+- python-docx
+- Pillow
+- BeautifulSoup4
+- lxml
+- Calibre (optional, for MOBI conversion)
+
+See requirements.txt for all dependencies.
 
 ## License
 

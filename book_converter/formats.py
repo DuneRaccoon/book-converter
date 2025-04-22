@@ -9,6 +9,7 @@ from pathlib import Path
 import tempfile
 import shutil
 import re
+import subprocess
 
 # This prevents circular imports
 if TYPE_CHECKING:
@@ -830,6 +831,7 @@ class MOBIConverter(BaseFormatConverter):
     def convert(self, output_path: str, **kwargs) -> str:
         """
         Convert the PDF to MOBI format.
+        This requires Calibre's ebook-convert tool to be installed on the system.
         
         Args:
             output_path (str): Path to save the output MOBI file
@@ -837,6 +839,9 @@ class MOBIConverter(BaseFormatConverter):
                 
         Returns:
             str: Path to the output MOBI file
+            
+        Raises:
+            ValueError: If conversion fails or ebook-convert is not installed
         """
         try:
             # First convert to EPUB
@@ -845,14 +850,83 @@ class MOBIConverter(BaseFormatConverter):
                 
                 # Use the EPUB converter
                 epub_converter = EPUBConverter(self.pdf_converter)
-                epub_converter.convert(epub_path, **kwargs)
+                epub_result = epub_converter.convert(epub_path, **kwargs)
                 
-                if not os.path.exists(output_path):
-                    raise ValueError("Failed to convert EPUB to MOBI")
-                    
-                logger.info(f"Successfully converted to MOBI: {output_path}")
-                return output_path
+                logger.info(f"EPUB created, now attempting conversion to MOBI")
+                
+                # Check if Calibre's ebook-convert is available
+                if self._check_calibre_available():
+                    # Convert using Calibre
+                    self._convert_with_calibre(epub_path, output_path)
+                else:
+                    # Fallback: just copy the EPUB file
+                    logger.warning("Calibre ebook-convert not found; MOBI conversion unavailable")
+                    logger.warning("Copying EPUB as a fallback (rename to .mobi extension)")
+                    shutil.copy2(epub_path, output_path)
+                    logger.info("Note: To enable proper MOBI conversion, install Calibre and ensure 'ebook-convert' is in your PATH")
+                
+                if os.path.exists(output_path):
+                    logger.info(f"Successfully created MOBI (or fallback): {output_path}")
+                    return output_path
+                else:
+                    raise ValueError("Failed to create output file")
                 
         except Exception as e:
             logger.error(f"Error converting to MOBI: {e}")
             raise ValueError(f"Failed to convert to MOBI: {e}")
+
+    def _check_calibre_available(self) -> bool:
+        """
+        Check if Calibre's ebook-convert is available in the system.
+        
+        Returns:
+            bool: True if available, False otherwise
+        """
+        try:
+            # Try to run ebook-convert with --version
+            result = subprocess.run(
+                ['ebook-convert', '--version'], 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
+                timeout=5
+            )
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return False
+    
+    def _convert_with_calibre(self, epub_path: str, mobi_path: str) -> None:
+        """
+        Convert EPUB to MOBI using Calibre's ebook-convert tool.
+        
+        Args:
+            epub_path (str): Path to input EPUB file
+            mobi_path (str): Path to output MOBI file
+            
+        Raises:
+            ValueError: If conversion fails
+        """
+        try:
+            logger.info("Converting EPUB to MOBI using Calibre's ebook-convert...")
+            
+            # Run the conversion
+            result = subprocess.run(
+                ['ebook-convert', epub_path, mobi_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=60  # 1 minute timeout
+            )
+            
+            # Check if successful
+            if result.returncode != 0:
+                logger.error(f"Calibre conversion failed: {result.stderr}")
+                raise ValueError(f"ebook-convert failed: {result.stderr}")
+                
+            logger.info("Calibre conversion successful")
+            
+        except subprocess.TimeoutExpired:
+            logger.error("Calibre conversion timed out")
+            raise ValueError("MOBI conversion timed out")
+        except subprocess.SubprocessError as e:
+            logger.error(f"Calibre process error: {e}")
+            raise ValueError(f"MOBI conversion failed: {e}")

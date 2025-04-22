@@ -135,7 +135,7 @@ class PDFConverter:
         # For now, we use a simplified approach
         blocks = page.get_text("blocks")
         blocks.sort(key=lambda b: (int(b[1] / 20), b[0]))  # Sort by y then x
-        return "\\n".join(b[4] for b in blocks)
+        return "\n".join(b[4] for b in blocks)
     
     def to_epub(self, output_path: str, **kwargs) -> str:
         """

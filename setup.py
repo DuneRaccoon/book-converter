@@ -36,7 +36,6 @@ setup(
         "beautifulsoup4>=4.9.3",  # For HTML processing
         "lxml>=4.6.3",  # For XML/HTML processing
         "tqdm>=4.61.0",  # For progress bars
-        "py-kindlegen>=0.3.1",  # For MOBI creation
         "click>=8.0.1",  # For CLI
     ],
     entry_points={
