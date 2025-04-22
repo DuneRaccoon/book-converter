@@ -77,17 +77,34 @@ class EPUBConverter(BaseFormatConverter):
                 - cover_image (str): Path to cover image
                 - css (str): Custom CSS
                 - toc_depth (int): Table of contents depth
+                - strip_text (list): Text patterns to strip
                 
         Returns:
             str: Path to the output EPUB file
         """
         try:
+            strip_text = kwargs.get('strip_text') or []
+            
             # Extract text from the PDF
-            text_by_page = self.pdf_converter.extract_text(
+            text_by_page_ = self.pdf_converter.extract_text(
                 include_tables=kwargs.get('include_tables', True),
                 detect_columns=kwargs.get('detect_columns', True)
             )
             
+            text_by_page = []
+            for page in text_by_page_:
+                # Remove unwanted characters
+                page = re.sub(r'\s+', ' ', page)
+                page = re.sub(r'^\s+|\s+$', '', page)
+                page = re.sub(r'\u200b', '\n', page)
+                
+                if strip_text:
+                    for pattern in strip_text:
+                        page = re.sub(pattern, '', page)
+                        
+                # Add cleaned page text to the list
+                text_by_page.append(page)
+                        
             # Create a new EPUB book
             book = epub.EpubBook()
             
@@ -114,18 +131,150 @@ class EPUBConverter(BaseFormatConverter):
                 
             # Create CSS
             default_css = '''
+            /* Base Typography */
             body {
-                font-family: serif;
-                margin: 5%;
+                font-family: 'Palatino', 'Palatino Linotype', 'Book Antiqua', serif;
+                font-size: 1em;
+                line-height: 1.6;
+                margin: 5% 6%;
                 text-align: justify;
+                color: #333;
+                max-width: 40em;
+                hyphens: auto;
             }
+
+            /* Headings */
             h1, h2, h3, h4, h5, h6 {
-                font-family: sans-serif;
-                margin-top: 2em;
+                font-family: 'Helvetica Neue', 'Arial', sans-serif;
+                line-height: 1.2;
+                margin-top: 2.5em;
                 margin-bottom: 1em;
+                color: #222;
+                font-weight: 600;
+                page-break-after: avoid;
             }
+            h1 {
+                font-size: 1.6em;
+                text-align: center;
+                margin-top: 3em;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 0.5em;
+            }
+            h2 { font-size: 1.4em; }
+            h3 { font-size: 1.2em; }
+            h4, h5, h6 { font-size: 1em; }
+
+            /* Paragraphs */
+            p {
+                margin-top: 0.75em;
+                margin-bottom: 0.75em;
+                orphans: 2;
+                widows: 2;
+            }
+
+            /* Links */
+            a {
+                color: #0066cc;
+                text-decoration: none;
+            }
+
+            /* Lists */
+            ul, ol {
+                margin: 1em 0 1em 1em;
+                padding-left: 1em;
+            }
+            li {
+                margin-bottom: 0.5em;
+            }
+
+            /* Images */
             img {
                 max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 1.5em auto;
+                page-break-inside: avoid;
+            }
+            figure {
+                margin: 1.5em 0;
+                text-align: center;
+            }
+            figcaption {
+                font-size: 0.9em;
+                font-style: italic;
+                margin-top: 0.5em;
+                color: #555;
+            }
+
+            /* Blockquotes */
+            blockquote {
+                margin: 1.5em 2em;
+                padding-left: 1em;
+                border-left: 3px solid #ddd;
+                font-style: italic;
+                color: #555;
+            }
+
+            /* Tables */
+            table {
+                width: 100%;
+                margin: 1.5em 0;
+                border-collapse: collapse;
+                font-size: 0.9em;
+            }
+            th, td {
+                padding: 0.5em;
+                border: 1px solid #ddd;
+            }
+            th {
+                background-color: #f8f8f8;
+                font-weight: bold;
+            }
+
+            /* Code and Pre */
+            code, pre {
+                font-family: "Courier New", Courier, monospace;
+                font-size: 0.9em;
+                white-space: pre-wrap;
+                background-color: #f8f8f8;
+                padding: 0.2em 0.4em;
+                border-radius: 3px;
+            }
+            pre {
+                margin: 1em 0;
+                padding: 1em;
+                overflow-x: auto;
+                border: 1px solid #ddd;
+                line-height: 1.4;
+            }
+            pre code {
+                padding: 0;
+                background: none;
+            }
+
+            /* Horizontal Rule */
+            hr {
+                height: 1px;
+                border: 0;
+                background-color: #ddd;
+                margin: 2em 0;
+            }
+
+            /* Special Elements */
+            .footnote {
+                font-size: 0.9em;
+                color: #666;
+                vertical-align: super;
+                line-height: 0;
+            }
+            .caption {
+                font-size: 0.9em;
+                font-style: italic;
+                text-align: center;
+                color: #555;
+            }
+            .page-break {
+                page-break-before: always;
             }
             '''
             css = kwargs.get('css', default_css)
@@ -149,7 +298,10 @@ class EPUBConverter(BaseFormatConverter):
             if has_toc:
                 current_page = 0
                 for i, (level, title, page) in enumerate(pdf_toc):
-                    next_page = pdf_toc[i+1][2] if i+1 < len(pdf_toc) else len(text_by_page)
+                    if title in (' ', '- ', '\u200b '):
+                        continue
+                    
+                    next_page = pdf_toc[i + 1][2] if i + 1 < len(pdf_toc) else len(text_by_page)
                     
                     # Get content for this chapter
                     chapter_content = "".join(text_by_page[page-1:next_page-1])
@@ -161,7 +313,7 @@ class EPUBConverter(BaseFormatConverter):
                     
                     # Add to toc
                     if level <= kwargs.get('toc_depth', 3):
-                        toc.append((level, chapter))
+                        toc.append((chapter, chapter.file_name))
             else:
                 # No TOC, create a chapter per page or group pages
                 page_count = len(text_by_page)
@@ -174,6 +326,7 @@ class EPUBConverter(BaseFormatConverter):
                         end_idx = min(i + chunk_size, page_count)
                         
                         chapter_content = "".join(text_by_page[i:end_idx])
+                                
                         chapter = self._create_chapter(
                             f'chapter_{chapter_num}',
                             f'Chapter {chapter_num}',
@@ -182,7 +335,7 @@ class EPUBConverter(BaseFormatConverter):
                         )
                         book.add_item(chapter)
                         chapters.append(chapter)
-                        toc.append((1, chapter))
+                        toc.append((chapter, chapter.file_name))
                 else:
                     # Create a chapter for each page if there aren't too many
                     for i, page_text in enumerate(text_by_page):
@@ -194,7 +347,7 @@ class EPUBConverter(BaseFormatConverter):
                         )
                         book.add_item(chapter)
                         chapters.append(chapter)
-                        toc.append((1, chapter))
+                        toc.append((chapter, chapter.file_name))
             
             # Add images
             for i, img_data in enumerate(self.pdf_converter.images):
@@ -208,7 +361,19 @@ class EPUBConverter(BaseFormatConverter):
                     book.add_item(img_item)
             
             # Define Table of Contents
-            book.toc = toc
+            try:
+                book.toc = toc
+                logger.info(f"Added {len(toc)} items to table of contents")
+            except Exception as toc_error:
+                logger.warning(f"Error setting TOC: {toc_error}. Creating simplified TOC.")
+                # Create a simplified TOC as fallback
+                simplified_toc = []
+                for chapter in chapters:
+                    try:
+                        simplified_toc.append((chapter, chapter.file_name))
+                    except Exception:
+                        pass
+                book.toc = simplified_toc
             
             # Add default NCX and Nav
             book.add_item(epub.EpubNcx())
