@@ -98,18 +98,26 @@ class EPUBConverter(BaseFormatConverter):
             
             text_by_page = []
             for page in text_by_page_:
-                # Remove unwanted characters
-                page = re.sub(r'\s+', ' ', page)
-                page = re.sub(r'^\s+|\s+$', '', page)
-                page = re.sub(r'\u200b', '\n', page)
-                
-                if strip_text:
-                    for pattern in strip_text:
-                        page = re.sub(pattern, '', page)
+                # More careful processing to preserve style
+                if kwargs.get('preserve_style', True):
+                    # Only minimal necessary processing
+                    page = re.sub(r'\u200b', '\n', page)  # Handle zero-width spaces
+                    
+                    if strip_text:
+                        for pattern in strip_text:
+                            page = re.sub(pattern, '', page)
+                else:
+                    # Original aggressive processing for non-style-preserving mode
+                    page = re.sub(r'\s+', ' ', page)
+                    page = re.sub(r'^\s+|\s+$', '', page)
+                    page = re.sub(r'\u200b', '\n', page)
+                    
+                    if strip_text:
+                        for pattern in strip_text:
+                            page = re.sub(pattern, '', page)
                         
-                # Add cleaned page text to the list
                 text_by_page.append(page)
-                        
+                
             # Create a new EPUB book
             book = epub.EpubBook()
             

@@ -91,12 +91,13 @@ def get_toc(doc: 'fitz.Document') -> List[Tuple[int, str, int]]:
     return toc
 
 
-def normalize_text(text: str) -> str:
+def normalize_text(text: str, preserve_style: bool = True) -> str:
     """
-    Normalize extracted text to fix common issues.
+    Normalize extracted text to fix common issues while preserving stylistic choices.
     
     Args:
         text (str): Raw text to normalize
+        preserve_style (bool): Whether to try to preserve original styling
         
     Returns:
         str: Normalized text
@@ -107,27 +108,76 @@ def normalize_text(text: str) -> str:
     # Normalize Unicode characters
     text = unicodedata.normalize('NFC', text)
     
-    # Replace multiple spaces with a single space
-    text = re.sub(r'\s+', ' ', text)
+    # Initial processing to capture and preserve indentation
+    lines = text.split('\n')
+    indentation_patterns = []
     
-    # Fix common OCR/PDF extraction issues
-    text = text.replace('fi', 'fi')  # Fix ligatures
-    text = text.replace('fl', 'fl')  # Fix ligatures
+    if preserve_style:
+        # Capture original indentation patterns
+        for line in lines:
+            match = re.match(r'^(\s+)', line)
+            indentation_patterns.append(match.group(1) if match else '')
     
-    # Fix paragraph breaks
-    text = re.sub(r'([a-z])\s*\n\s*([a-z])', r'\1 \2', text)  # Join broken lines
-    text = re.sub(r'([^.!?:])\s*\n\s*\n', r'\1\n\n', text)    # Preserve paragraph breaks
+    # Process each line to preserve stylistic patterns while fixing issues
+    processed_lines = []
     
-    # Fix hyphenation at line breaks
-    text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+    for i, line in enumerate(lines):
+        # Preserve original indentation if requested
+        indent = indentation_patterns[i] if preserve_style and i < len(indentation_patterns) else ''
+        content = line.lstrip() if indent else line
+        
+        # Fix spacing issues but preserve intentional spacing in dialogue
+        if preserve_style:
+            # Don't collapse spaces in dialogue markers (like "  —")
+            if re.match(r'^\s*["\'—–]', content):
+                # Preserve spacing in dialogue markers
+                content = re.sub(r'(?<!["\'\s—–])\s{2,}(?!["\'\s—–])', ' ', content)
+            else:
+                content = re.sub(r'\s+', ' ', content)
+        else:
+            # Original behavior - collapse all multiple spaces
+            content = re.sub(r'\s+', ' ', content)
+            
+        processed_lines.append(indent + content)
     
-    # Normalize whitespace at the start and end
-    text = text.strip()
+    # Rejoin processed lines
+    text = '\n'.join(processed_lines)
     
-    # Remove consecutive blank lines
+    # Fix ligatures and common OCR issues
+    text = text.replace('fi', 'fi')
+    text = text.replace('fl', 'fl')
+    
+    # Enhanced paragraph break handling with dialogue awareness
+    if preserve_style:
+        # Don't join lines in dialogue - identify dialogue patterns:
+        # - Lines starting with quotes or dashes
+        # - Lines within quoted speech
+        # - Lines with dialogue attribution ("...," she said)
+        
+        # 1. Join broken sentences but not dialogue or stylistic breaks
+        text = re.sub(r'([a-z,;:])\s*\n\s*([a-z])(?!["\'—–])', r'\1 \2', text)
+        
+        # 2. Preserve line breaks in dialogue attribution
+        text = re.sub(r'(["\']\s*[,.!?])\s*\n\s*([a-z])', r'\1\n\2', text)
+        
+        # 3. Preserve indented lines which often indicate dialogue or special formatting
+        text = re.sub(r'\n(\s+[^\s])', r'\n\1', text)
+    else:
+        # Original behavior
+        text = re.sub(r'([a-z])\s*\n\s*([a-z])', r'\1 \2', text)
+        text = re.sub(r'([^.!?:])\s*\n\s*\n', r'\1\n\n', text)
+    
+    # Improved hyphenation fixes that respect dialogue
+    if preserve_style:
+        # Don't join hyphenated words across dialogue boundaries
+        text = re.sub(r'(\w+)-\s*\n\s*(\w+)(?!\s*["\'—–])', r'\1\2', text)
+    else:
+        text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+    
+    # Normalize paragraph spacing but preserve intentional multiple breaks
     text = re.sub(r'\n{3,}', '\n\n', text)
     
-    return text
+    return text.strip()
 
 
 def detect_columns(page: 'fitz.Page', threshold: float = 0.3) -> List[List[float]]:

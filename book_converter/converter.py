@@ -95,7 +95,7 @@ class PDFConverter:
         # Clean up empty metadata fields
         return {k: v for k, v in metadata.items() if v}
     
-    def extract_text(self, include_tables: bool = True, detect_columns: bool = True) -> List[str]:
+    def extract_text(self, include_tables: bool = True, detect_columns: bool = True, preserve_style: bool = True) -> List[str]:
         """
         Extract text content from each page of the PDF.
         
@@ -107,15 +107,16 @@ class PDFConverter:
             List[str]: List of text content for each page
         """
         text_by_page = []
-        
+    
         for page_num, page in enumerate(self.pages):
             if detect_columns:
                 text = self._extract_columns(page)
             else:
+                # Use raw text extraction to preserve more formatting details
                 text = page.get_text()
             
-            # Normalize text (fix encoding issues, weird spacing, etc.)
-            text = normalize_text(text)
+            # Use the enhanced normalization with style preservation
+            text = normalize_text(text, preserve_style=preserve_style)
             text_by_page.append(text)
             
         return text_by_page
