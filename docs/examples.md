@@ -319,6 +319,92 @@ converter.to_epub(
 )
 ```
 
+## Using Chapter Pattern Detection
+
+### Detecting Chapter Patterns in PDF Content
+
+Command-line:
+```bash
+book-converter convert novel.pdf --output novel.epub --chapter-pattern quoted --chapter-style quoted
+```
+
+Python code:
+```python
+from book_converter import PDFConverter, CHAPTER_PATTERNS, CHAPTER_STYLES
+
+converter = PDFConverter("novel.pdf")
+
+# Using predefined patterns and styles
+converter.to_epub(
+    "novel.epub",
+    chapter_pattern="quoted",    # Detect "Chapter X: Title", quote, and ~
+    chapter_style_name="quoted" # Apply the quoted style
+)
+```
+
+### Using Custom Chapter Patterns
+
+Command-line:
+```bash
+book-converter convert novel.pdf --output novel.epub --custom-chapter-pattern "Chapter\\s+\\d+\\s*:\\s*[^\\n]+\\n" --chapter-style decorative
+```
+
+Python code:
+```python
+from book_converter import PDFConverter, CHAPTER_PATTERNS, CHAPTER_STYLES
+
+converter = PDFConverter("novel.pdf")
+
+# Custom pattern with predefined style
+converter.to_epub(
+    "novel.epub",
+    chapter_pattern=r"Chapter\s+\d+\s*:\s*[^\n]+\n",  # Custom regex pattern
+    chapter_style_name="decorative"  # Use decorative style
+)
+
+# Custom pattern with custom CSS
+custom_style = """
+.chapter-opening {
+    margin: 3em auto;
+    font-family: 'Georgia', serif;
+    font-size: 1.2em;
+    line-height: 1.6;
+    text-align: center;
+    color: #444;
+    border-bottom: 2px double #999;
+    padding-bottom: 1em;
+}
+"""
+
+converter.to_epub(
+    "novel_custom.epub",
+    chapter_pattern=r"Chapter\s+\d+\s*:\s*[^\n]+\n",  # Custom regex pattern
+    chapter_style=custom_style  # Custom CSS
+)
+```
+
+### Extracting Chapter Titles
+
+Python code:
+```python
+from book_converter import PDFConverter, ChapterDetector
+
+# First extract text from PDF
+converter = PDFConverter("novel.pdf")
+text_by_page = converter.extract_text()
+text_content = "\n".join(text_by_page)
+
+# Create a chapter detector with the pattern
+chapter_detector = ChapterDetector(r"Chapter\s+\d+(?:\s*:\s*[^\n]+)?\s*\n")
+
+# Extract chapter titles
+chapter_titles = chapter_detector.extract_chapter_titles(text_content)
+
+print(f"Found {len(chapter_titles)} chapters:")
+for title in chapter_titles:
+    print(f"  - {title.strip()}")
+```
+
 ## Working with Extracted Content
 
 ### Extracting and Processing Text

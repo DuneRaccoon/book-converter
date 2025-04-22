@@ -63,6 +63,9 @@ Convert the PDF to EPUB format.
   - `cover_image` (str): Path to cover image
   - `css` (str): Custom CSS
   - `toc_depth` (int): Table of contents depth (default: 3)
+  - `chapter_pattern` (str): Regex pattern to detect chapter openings or predefined pattern name
+  - `chapter_style_name` (str): Predefined style name for chapter openings ('standard', 'quoted', 'decorative')
+  - `chapter_style` (str): Custom CSS for chapter openings
 
 **Returns:**
 - `str`: Path to the output EPUB file
@@ -345,3 +348,66 @@ Sanitize a filename to ensure it's safe for all operating systems.
 
 **Returns:**
 - `str`: Sanitized filename
+
+## Chapter Pattern Detection
+
+### ChapterDetector
+
+Class for detecting and formatting chapter openings in text.
+
+```python
+ChapterDetector(pattern, style_class="chapter-opening")
+```
+
+**Parameters:**
+- `pattern` (str): Regex pattern to detect chapter openings
+- `style_class` (str): CSS class to apply to the chapter opening
+
+#### Methods
+
+##### format_chapter_openings
+
+```python
+format_chapter_openings(text)
+```
+
+Detect and format chapter openings in text.
+
+**Parameters:**
+- `text` (str): Text content to process
+
+**Returns:**
+- `str`: Processed text with formatted chapter openings
+
+##### extract_chapter_titles
+
+```python
+extract_chapter_titles(text)
+```
+
+Extract just the chapter titles from text.
+
+**Parameters:**
+- `text` (str): Text content to process
+
+**Returns:**
+- `List[str]`: List of chapter titles
+
+### Predefined Chapter Patterns
+
+The following predefined chapter patterns are available:
+
+- `standard`: Basic chapter pattern for "Chapter X" or "Chapter X: Title"
+- `quoted`: Pattern for chapters with quotes, like "Chapter X: Title" followed by a quote and ending with "~"
+- `numbered`: Pattern for numbered chapters without the word "Chapter" (e.g., "1. The Beginning")
+- `roman`: Pattern for chapters with roman numerals (e.g., "I. Introduction")
+
+### Predefined Chapter Styles
+
+The following predefined chapter styles are available:
+
+- `standard`: Simple centered bold styling
+- `quoted`: Italic text with decorative lines above and below
+- `decorative`: Styled with border, background, and box shadow
+
+These can be accessed through the `CHAPTER_PATTERNS` and `CHAPTER_STYLES` dictionaries:

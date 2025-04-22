@@ -11,6 +11,7 @@ import glob
 
 from . import __version__
 from .converter import PDFConverter
+from .chapter_patterns import CHAPTER_PATTERNS, CHAPTER_STYLES
 
 # Configure logger
 logging.basicConfig(
@@ -116,6 +117,20 @@ Examples:
         help='Maximum depth for table of contents (default: 3)'
     )
     convert_parser.add_argument(
+        '--chapter-pattern',
+        choices=list(CHAPTER_PATTERNS.keys()),
+        help='Predefined chapter pattern to detect (standard, quoted, numbered, roman)'
+    )
+    convert_parser.add_argument(
+        '--custom-chapter-pattern',
+        help='Custom regex pattern to detect chapter openings'
+    )
+    convert_parser.add_argument(
+        '--chapter-style',
+        choices=list(CHAPTER_STYLES.keys()),
+        help='Style to apply to detected chapter openings (standard, quoted, decorative)'
+    )
+    convert_parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         help='Enable verbose output'
@@ -162,6 +177,16 @@ Examples:
         action='store_true',
         default=True,
         help='Detect columns in the PDF (default: True)'
+    )
+    batch_parser.add_argument(
+        '--chapter-pattern',
+        choices=list(CHAPTER_PATTERNS.keys()),
+        help='Predefined chapter pattern to detect (standard, quoted, numbered, roman)'
+    )
+    batch_parser.add_argument(
+        '--chapter-style',
+        choices=list(CHAPTER_STYLES.keys()),
+        help='Style to apply to detected chapter openings (standard, quoted, decorative)'
     )
     batch_parser.add_argument(
         '--verbose', '-v',
@@ -259,6 +284,19 @@ def convert_single_file(args: argparse.Namespace) -> int:
         if args.cover_image:
             options['cover_image'] = args.cover_image
             
+        # Handle chapter pattern options
+        if args.chapter_pattern:
+            options['chapter_pattern'] = args.chapter_pattern
+            logger.info(f"Using predefined chapter pattern: {args.chapter_pattern}")
+        elif args.custom_chapter_pattern:
+            options['chapter_pattern'] = args.custom_chapter_pattern
+            logger.info(f"Using custom chapter pattern: {args.custom_chapter_pattern}")
+            
+        # Handle chapter style
+        if args.chapter_style:
+            options['chapter_style_name'] = args.chapter_style
+            logger.info(f"Using chapter style: {args.chapter_style}")
+            
         # Perform the conversion
         if format_name == 'epub':
             converter.to_epub(output_path, **options)
@@ -339,6 +377,16 @@ def batch_convert_files(args: argparse.Namespace) -> int:
                     'detect_columns': args.detect_columns,
                     'include_images': args.include_images
                 }
+                
+                # Handle chapter pattern options
+                if args.chapter_pattern:
+                    options['chapter_pattern'] = args.chapter_pattern
+                    logger.info(f"Using predefined chapter pattern: {args.chapter_pattern}")
+                
+                # Handle chapter style
+                if args.chapter_style:
+                    options['chapter_style_name'] = args.chapter_style
+                    logger.info(f"Using chapter style: {args.chapter_style}")
                 
                 # Convert to each requested format
                 for fmt in formats:

@@ -39,6 +39,9 @@ book-converter convert input.pdf --output output.epub
 | `--detect-columns` | Detect columns in the PDF (default: True) |
 | `--no-detect-columns` | Disable column detection |
 | `--toc-depth` | Maximum depth for table of contents (default: 3) |
+| `--chapter-pattern` | Predefined chapter pattern to detect (standard, quoted, numbered, roman) |
+| `--custom-chapter-pattern` | Custom regex pattern to detect chapter openings |
+| `--chapter-style` | Style to apply to detected chapter openings (standard, quoted, decorative) |
 | `--verbose`, `-v` | Enable verbose output |
 
 ### Batch Converting Multiple PDFs
@@ -59,6 +62,8 @@ book-converter batch *.pdf --output-dir converted --format epub,docx
 | `--include-images` | Include images in the output (default: True) |
 | `--no-images` | Exclude images from the output |
 | `--detect-columns` | Detect columns in the PDF (default: True) |
+| `--chapter-pattern` | Predefined chapter pattern to detect (standard, quoted, numbered, roman) |
+| `--chapter-style` | Style to apply to detected chapter openings (standard, quoted, decorative) |
 | `--verbose`, `-v` | Enable verbose output |
 
 ### Examples
@@ -85,6 +90,18 @@ Convert a PDF without including images:
 
 ```bash
 book-converter convert document.pdf --output document.md --no-images
+```
+
+Convert a PDF with chapter detection and styling:
+
+```bash
+book-converter convert novel.pdf --output novel.epub --chapter-pattern quoted --chapter-style quoted
+```
+
+Use a custom chapter pattern:
+
+```bash
+book-converter convert novel.pdf --output novel.epub --custom-chapter-pattern "Chapter\\s+\\d+\\s*:\\s*[^\\n]+\\n" --chapter-style decorative
 ```
 
 ## Python API
@@ -121,6 +138,8 @@ converter.to_epub(
     author="Author Name",
     language="en",
     cover_image="path/to/cover.jpg",
+    chapter_pattern="quoted",  # Use predefined pattern for chapter detection
+    chapter_style_name="quoted",  # Apply quoted style to chapter openings
     toc_depth=2
 )
 ```

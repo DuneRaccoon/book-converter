@@ -11,6 +11,8 @@ import shutil
 import re
 import subprocess
 
+from .chapter_patterns import ChapterDetector, CHAPTER_PATTERNS, CHAPTER_STYLES
+
 # This prevents circular imports
 if TYPE_CHECKING:
     from .converter import PDFConverter
@@ -78,6 +80,9 @@ class EPUBConverter(BaseFormatConverter):
                 - css (str): Custom CSS
                 - toc_depth (int): Table of contents depth
                 - strip_text (list): Text patterns to strip
+                - chapter_pattern (str): Regex pattern to detect chapter openings
+                - chapter_style (str): CSS style for chapter openings
+                - chapter_style_name (str): Predefined style name ('standard', 'quoted', 'decorative')
                 
         Returns:
             str: Path to the output EPUB file
@@ -108,6 +113,28 @@ class EPUBConverter(BaseFormatConverter):
             # Create a new EPUB book
             book = epub.EpubBook()
             
+            # Handle chapter pattern and styling
+            chapter_pattern = kwargs.get('chapter_pattern')
+            chapter_style_name = kwargs.get('chapter_style_name')
+            chapter_style = kwargs.get('chapter_style')
+            
+            # If a predefined style name is provided, use that
+            if chapter_style_name and chapter_style_name in CHAPTER_STYLES:
+                chapter_style = CHAPTER_STYLES[chapter_style_name]
+            
+            # If a predefined pattern name is provided, use that
+            if isinstance(chapter_pattern, str) and chapter_pattern in CHAPTER_PATTERNS:
+                chapter_pattern = CHAPTER_PATTERNS[chapter_pattern]
+            
+            # Initialize chapter detector if pattern is provided
+            chapter_detector = None
+            if chapter_pattern:
+                try:
+                    chapter_detector = ChapterDetector(chapter_pattern)
+                    logger.info(f"Chapter pattern initialized: {chapter_pattern}")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize chapter detector: {e}")
+            
             # Set metadata
             title = kwargs.get('title') or self.pdf_converter.metadata.get('title', 'Untitled Book')
             author = kwargs.get('author') or self.pdf_converter.metadata.get('author', 'Unknown Author')
@@ -131,6 +158,14 @@ class EPUBConverter(BaseFormatConverter):
                 
             # Create CSS
             default_css = '''
+            /* Chapter opening styles */
+            .chapter-opening {
+                margin: 2em 0;
+                font-style: italic;
+                text-align: center;
+                line-height: 1.6;
+            }
+            
             /* Base Typography */
             body {
                 font-family: 'Palatino', 'Palatino Linotype', 'Book Antiqua', serif;
@@ -277,6 +312,10 @@ class EPUBConverter(BaseFormatConverter):
                 page-break-before: always;
             }
             '''
+            # Add chapter style to CSS if provided
+            if chapter_style:
+                default_css += chapter_style
+                
             css = kwargs.get('css', default_css)
             css_file = epub.EpubItem(
                 uid="style_default",
@@ -305,6 +344,10 @@ class EPUBConverter(BaseFormatConverter):
                     
                     # Get content for this chapter
                     chapter_content = "".join(text_by_page[page-1:next_page-1])
+                    
+                    # Apply chapter pattern formatting if detector is available
+                    if chapter_detector:
+                        chapter_content = chapter_detector.format_chapter_openings(chapter_content)
                     
                     # Create chapter
                     chapter = self._create_chapter(f'chapter_{i}', title, chapter_content, css_file)

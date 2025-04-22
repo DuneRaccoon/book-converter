@@ -6,6 +6,7 @@ __version__ = "1.0.0"
 
 from .converter import PDFConverter
 from .formats import EPUBConverter, DOCXConverter, HTMLConverter, TextConverter, MarkdownConverter, MOBIConverter
+from .chapter_patterns import ChapterDetector, CHAPTER_PATTERNS, CHAPTER_STYLES
 
 __all__ = [
     "PDFConverter", 
@@ -14,5 +15,8 @@ __all__ = [
     "HTMLConverter", 
     "TextConverter", 
     "MarkdownConverter",
-    "MOBIConverter"
+    "MOBIConverter",
+    "ChapterDetector",
+    "CHAPTER_PATTERNS",
+    "CHAPTER_STYLES"
 ]
