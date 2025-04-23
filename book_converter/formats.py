@@ -202,8 +202,9 @@ class EPUBConverter(BaseFormatConverter):
                     '''
                     book.add_item(cover_html)
                     
-                    # Ensure cover is first in the spine (reading order)
-                    book.spine = ['cover'] + book.spine
+                    # Don't set spine yet, we'll include the cover in the final spine
+                    # Just track that we have a cover
+                    has_cover = True
                     
                     # Add to guide as cover
                     book.guide.append({
@@ -258,8 +259,9 @@ class EPUBConverter(BaseFormatConverter):
                     '''
                     book.add_item(cover_html)
                     
-                    # Ensure cover is first in the spine (reading order)
-                    book.spine = ['cover'] + book.spine
+                    # Don't set spine yet, we'll include the cover in the final spine
+                    # Just track that we have a cover
+                    has_cover = True
                     
                     # Add to guide as cover
                     book.guide.append({
@@ -448,9 +450,11 @@ class EPUBConverter(BaseFormatConverter):
             # If we have TOC, use it to structure chapters
             if has_toc:
                 current_page = 0
+                pdf_toc = [
+                    (level, title, page) for level, title, page in pdf_toc
+                    if title not in (' ', '- ', '\u200b ')
+                ]
                 for i, (level, title, page) in enumerate(pdf_toc):
-                    if title in (' ', '- ', '\u200b '):
-                        continue
                     
                     next_page = pdf_toc[i + 1][2] if i + 1 < len(pdf_toc) else len(text_by_page)
                     
@@ -459,7 +463,7 @@ class EPUBConverter(BaseFormatConverter):
                     
                     # Apply chapter pattern formatting if detector is available
                     if chapter_detector:
-                        chapter_content = chapter_detector.format_chapter_openings(chapter_content)
+                        chapter_content = chapter_detector.format_chapter_openings(chapter_content, chapter_title=title)
                     
                     # Create chapter
                     chapter = self._create_chapter(f'chapter_{i}', title, chapter_content, css_file)
@@ -534,8 +538,11 @@ class EPUBConverter(BaseFormatConverter):
             book.add_item(epub.EpubNcx())
             book.add_item(epub.EpubNav())
             
-            # Define spine
-            book.spine = ['nav'] + chapters
+            # Define spine with cover first if we have one
+            if 'has_cover' in locals() and has_cover:
+                book.spine = ['cover', 'nav'] + chapters
+            else:
+                book.spine = ['nav'] + chapters
             
             # Write to file
             epub.write_epub(output_path, book, {})
@@ -547,7 +554,7 @@ class EPUBConverter(BaseFormatConverter):
             logger.error(f"Error converting to EPUB: {e}")
             raise ValueError(f"Failed to convert to EPUB: {e}")
     
-    def _create_chapter(self, id_name, title, content, css):
+    def _create_chapter(self, id_name: str, title: str, content: str, css: epub.EpubItem) -> epub.EpubHtml:
         """
         Create an EPUB chapter.
         
@@ -560,6 +567,16 @@ class EPUBConverter(BaseFormatConverter):
         Returns:
             epub.EpubHtml: Chapter object
         """
+        
+        # Always set the title in titlecase
+        title = title.title()
+        
+        # If the content ends with n number of digits, remove them all
+        if re.search(r'\d+$', content):
+            content = re.sub(r'\d+$', '', content)
+        
+        content = content.strip()
+        
         chapter = epub.EpubHtml(
             title=title, 
             file_name=f'{id_name}.xhtml',

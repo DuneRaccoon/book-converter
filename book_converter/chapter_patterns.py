@@ -32,7 +32,7 @@ class ChapterDetector:
             logger.error(f"Invalid regex pattern: {e}")
             raise ValueError(f"Invalid chapter pattern: {e}")
     
-    def format_chapter_openings(self, text: str) -> str:
+    def format_chapter_openings(self, text: str, chapter_title: Optional[str] = None) -> str:
         """
         Detect and format chapter openings in text.
         
@@ -51,6 +51,10 @@ class ChapterDetector:
         # Process in reverse order
         for match in reversed(matches):
             opening = match.group(0)
+            # If chapter_title is provided, remove it from the opening
+            if chapter_title:
+                opening = opening.replace(chapter_title, "").strip()
+                
             styled_opening = f'<div class="{self.style_class}">{opening}</div>'
             
             # Replace the matched text with the styled version
