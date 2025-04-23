@@ -1,6 +1,6 @@
 # Book Converter
 
-A powerful, production-ready PDF conversion tool that can transform PDF files into various formats including EPUB, HTML, TXT, DOCX, and Markdown.
+A PDF conversion tool that can transform PDF files into various formats including EPUB, HTML, TXT, DOCX, and Markdown.
 
 ## Features
 

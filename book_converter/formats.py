@@ -157,12 +157,116 @@ class EPUBConverter(BaseFormatConverter):
             if cover_image_path and os.path.exists(cover_image_path):
                 with open(cover_image_path, 'rb') as img_file:
                     cover_content = img_file.read()
+                    # Set the cover image for the EPUB
                     book.set_cover('cover.jpg', cover_content)
+                    
+                    # Add the image item first
+                    cover_image = epub.EpubImage(
+                        uid='cover-image',
+                        file_name='images/cover.jpg',
+                        content=cover_content,
+                        media_type='image/jpeg'
+                    )
+                    book.add_item(cover_image)
+                    
+                    # Create a properly formatted cover HTML page with styling
+                    cover_html = epub.EpubHtml(
+                        uid='cover',
+                        title='Cover',
+                        file_name='cover.xhtml'
+                    )
+                    cover_html.content = '''
+                    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+                        <head>
+                            <title>Cover</title>
+                            <style>
+                                body {
+                                    margin: 0;
+                                    padding: 0;
+                                    text-align: center;
+                                }
+                                img {
+                                    max-width: 100%;
+                                    max-height: 100%;
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div>
+                                <img src="images/cover.jpg" alt="Cover Image"/>
+                            </div>
+                        </body>
+                    </html>
+                    '''
+                    book.add_item(cover_html)
+                    
+                    # Ensure cover is first in the spine (reading order)
+                    book.spine = ['cover'] + book.spine
+                    
+                    # Add to guide as cover
+                    book.guide.append({
+                        'type': 'cover',
+                        'href': 'cover.xhtml',
+                        'title': 'Cover'
+                    })
             elif self.pdf_converter.images and len(self.pdf_converter.images) > 0:
                 # Use the first image as cover if available
                 first_image = self.pdf_converter.images[0]
                 if 'image' in first_image:
+                    # Similar pattern for extracted image
                     book.set_cover('cover.jpg', first_image['image'])
+                    
+                    cover_image = epub.EpubImage(
+                        uid='cover-image',
+                        file_name='images/cover.jpg',
+                        content=first_image['image'],
+                        media_type=f'image/{first_image["ext"]}'
+                    )
+                    book.add_item(cover_image)
+                    
+                    cover_html = epub.EpubHtml(
+                        uid='cover',
+                        title='Cover',
+                        file_name='cover.xhtml'
+                    )
+                    cover_html.content = '''
+                    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+                        <head>
+                            <title>Cover</title>
+                            <style>
+                                body {
+                                    margin: 0;
+                                    padding: 0;
+                                    text-align: center;
+                                }
+                                img {
+                                    max-width: 100%;
+                                    max-height: 100%;
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div>
+                                <img src="images/cover.jpg" alt="Cover Image"/>
+                            </div>
+                        </body>
+                    </html>
+                    '''
+                    book.add_item(cover_html)
+                    
+                    # Ensure cover is first in the spine (reading order)
+                    book.spine = ['cover'] + book.spine
+                    
+                    # Add to guide as cover
+                    book.guide.append({
+                        'type': 'cover',
+                        'href': 'cover.xhtml',
+                        'title': 'Cover'
+                    })
                 
             # Create CSS
             default_css = '''
