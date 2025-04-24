@@ -157,10 +157,7 @@ class EPUBConverter(BaseFormatConverter):
             if cover_image_path and os.path.exists(cover_image_path):
                 with open(cover_image_path, 'rb') as img_file:
                     cover_content = img_file.read()
-                    # Set the cover image for the EPUB
-                    book.set_cover('cover.jpg', cover_content)
-                    
-                    # Add the image item first
+                    # Add the cover image item
                     cover_image = epub.EpubImage(
                         uid='cover-image',
                         file_name='images/cover.jpg',
@@ -168,6 +165,9 @@ class EPUBConverter(BaseFormatConverter):
                         media_type='image/jpeg'
                     )
                     book.add_item(cover_image)
+                    
+                    # Set the cover property for the EPUB
+                    book.set_cover('images/cover.jpg', cover_content)
                     
                     # Create a properly formatted cover HTML page with styling
                     cover_html = epub.EpubHtml(
@@ -217,7 +217,7 @@ class EPUBConverter(BaseFormatConverter):
                 first_image = self.pdf_converter.images[0]
                 if 'image' in first_image:
                     # Similar pattern for extracted image
-                    book.set_cover('cover.jpg', first_image['image'])
+                    book.set_cover('images/cover.jpg', first_image['image'])
                     
                     cover_image = epub.EpubImage(
                         uid='cover-image',
@@ -456,10 +456,19 @@ class EPUBConverter(BaseFormatConverter):
                 ]
                 for i, (level, title, page) in enumerate(pdf_toc):
                     
-                    next_page = pdf_toc[i + 1][2] if i + 1 < len(pdf_toc) else len(text_by_page)
+                    # Calculate page range for chapter content
+                    start_page = page-1  # 0-based index
+                    
+                    # If this is the last chapter, get all remaining pages
+                    if i + 1 < len(pdf_toc):
+                        end_page = pdf_toc[i + 1][2] - 1  # Next chapter's start page (0-based)
+                    else:
+                        end_page = len(text_by_page)  # Get all remaining pages
                     
                     # Get content for this chapter
-                    chapter_content = "".join(text_by_page[page-1:next_page-1])
+                    chapter_content = ""  # Initialize empty string
+                    if start_page < len(text_by_page):  # Verify start page is valid
+                        chapter_content = "".join(text_by_page[start_page:end_page])
                     
                     # Apply chapter pattern formatting if detector is available
                     if chapter_detector:
@@ -662,9 +671,19 @@ class DOCXConverter(BaseFormatConverter):
                     # Add heading with appropriate level
                     heading = doc.add_heading(title, level=min(level, 9))
                     
+                    # Calculate page range for section content
+                    start_page = page-1  # 0-based index
+                    
+                    # If this is the last section, get all remaining pages
+                    if i + 1 < len(pdf_toc):
+                        end_page = pdf_toc[i + 1][2] - 1  # Next section's start page (0-based)
+                    else:
+                        end_page = len(text_by_page)  # Get all remaining pages
+                    
                     # Get content for this section
-                    next_page = pdf_toc[i+1][2] if i+1 < len(pdf_toc) else len(text_by_page)
-                    section_content = "".join(text_by_page[page-1:next_page-1])
+                    section_content = ""  # Initialize empty string
+                    if start_page < len(text_by_page):  # Verify start page is valid
+                        section_content = "".join(text_by_page[start_page:end_page])
                     
                     # Break into paragraphs and add
                     paragraphs = section_content.split('\n\n')
@@ -818,9 +837,19 @@ class HTMLConverter(BaseFormatConverter):
                     html += f'<section id="page_{page}">\n'
                     html += f'<h{min(level+1, 6)}>{title}</h{min(level+1, 6)}>\n'
                     
+                    # Calculate page range for section content
+                    start_page = page-1  # 0-based index
+                    
+                    # If this is the last section, get all remaining pages
+                    if i + 1 < len(pdf_toc):
+                        end_page = pdf_toc[i + 1][2] - 1  # Next section's start page (0-based)
+                    else:
+                        end_page = len(text_by_page)  # Get all remaining pages
+                    
                     # Get content for this section
-                    next_page = pdf_toc[i+1][2] if i+1 < len(pdf_toc) else len(text_by_page)
-                    section_content = "".join(text_by_page[page-1:next_page-1])
+                    section_content = ""  # Initialize empty string
+                    if start_page < len(text_by_page):  # Verify start page is valid
+                        section_content = "".join(text_by_page[start_page:end_page])
                     
                     # Convert newlines to <p> tags
                     paragraphs = section_content.split('\n\n')
@@ -985,9 +1014,19 @@ class TextConverter(BaseFormatConverter):
                     output_text += f"{title}\n"
                     output_text += "=" * 50 + "\n\n"
                     
+                    # Calculate page range for section content
+                    start_page = page-1  # 0-based index
+                    
+                    # If this is the last section, get all remaining pages
+                    if i + 1 < len(pdf_toc):
+                        end_page = pdf_toc[i + 1][2] - 1  # Next section's start page (0-based)
+                    else:
+                        end_page = len(text_by_page)  # Get all remaining pages
+                    
                     # Get content for this section
-                    next_page = pdf_toc[i+1][2] if i+1 < len(pdf_toc) else len(text_by_page)
-                    section_content = "".join(text_by_page[page-1:next_page-1])
+                    section_content = ""  # Initialize empty string
+                    if start_page < len(text_by_page):  # Verify start page is valid
+                        section_content = "".join(text_by_page[start_page:end_page])
                     
                     # Add to output
                     output_text += section_content + "\n\n"
@@ -1103,9 +1142,19 @@ class MarkdownConverter(BaseFormatConverter):
                     # Add section heading
                     md_text += f"\n{'#' * (level + 1)} {title} {{#page-{page}}}\n\n"
                     
+                    # Calculate page range for section content
+                    start_page = page-1  # 0-based index
+                    
+                    # If this is the last section, get all remaining pages
+                    if i + 1 < len(pdf_toc):
+                        end_page = pdf_toc[i + 1][2] - 1  # Next section's start page (0-based)
+                    else:
+                        end_page = len(text_by_page)  # Get all remaining pages
+                    
                     # Get content for this section
-                    next_page = pdf_toc[i+1][2] if i+1 < len(pdf_toc) else len(text_by_page)
-                    section_content = "".join(text_by_page[page-1:next_page-1])
+                    section_content = ""  # Initialize empty string
+                    if start_page < len(text_by_page):  # Verify start page is valid
+                        section_content = "".join(text_by_page[start_page:end_page])
                     
                     # Convert to paragraphs
                     paragraphs = section_content.split('\n\n')
